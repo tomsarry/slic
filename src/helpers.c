@@ -1,7 +1,5 @@
 #include "helpers.h"
 
-#include <math.h>
-
 float **allocate_float_matrix(int length, int width) {
   float **matrix;
   float *internal_ptr;
@@ -59,17 +57,16 @@ float f_lab(float t) {
   return t / (3 * pow(delta, 2)) + 4/29.;
 }
 
-void convert_ciexyz_to_cielab(float **cl, float **ca, float **cb, float **x, float **y, float **z, int length, int width) {
+void convert_ciexyz_to_cielab(float **cl, float **ca, float **cb, float **cx, float **cy, float **cz, int length, int width) {
   float xn = 95.0489;
   float yn = 100;
   float zn = 108.8840;
-  float delta = 6 / 29.0;
 
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
-      cl[i][j] = 116 * f_lab(y[i][j] / yn) - 16;
-      ca[i][j] = 500 * (f_lab(x[i][j] / xn) - f_lab(y[i][j] / yn));
-      cb[i][j] = 200 * (f_lab(y[i][j] / yn) - f_lab(z[i][j] / zn));
+      cl[i][j] = 116 * f_lab(cy[i][j] / yn) - 16;
+      ca[i][j] = 500 * (f_lab(cx[i][j] / xn) - f_lab(cy[i][j] / yn));
+      cb[i][j] = 200 * (f_lab(cy[i][j] / yn) - f_lab(cz[i][j] / zn));
     }
   }
 }
@@ -81,6 +78,76 @@ void convert_rgb_to_cielab(float **cl, float **ca, float **cb, float **r, float 
 
   convert_rgb_to_ciexyz(tmp1, tmp2, tmp3, r, g, b, length, width);
   convert_ciexyz_to_cielab(cl, ca, cb, tmp1, tmp2, tmp3, length, width);
+
+  free_float_matrix(tmp1);
+  free_float_matrix(tmp2);
+  free_float_matrix(tmp3);
+}
+
+float f_lab_inverse(float t) {
+  float delta = 6/29.;
+
+  if (t > delta) return pow(t, 3);
+  return 3 * pow(delta, 2) * (t - 4/29.);
+}
+
+void convert_cielab_to_ciexyz(float **cx, float **cy, float **cz, float **cl, float **ca, float **cb, int length, int width) {
+  float xn = 95.0489;
+  float yn = 100;
+  float zn = 108.8840;
+
+  float varx, vary, varz;
+
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      vary = (cl[i][j] + 16) / 116.;
+      varx = (ca[i][j] / 500.) + vary;
+      varz = vary - (cb[i][j] / 200.);
+
+      if (pow(vary, 3) > 0.008856) vary = pow(vary, 3);
+      else vary = ((vary - 16) / 116.) / 7.787;
+
+      if (pow(varx, 3) > 0.008856) varx = pow(varx, 3);
+      else varx = ((varx - 16) / 116.) / 7.787;
+
+      if (pow(varz, 3) > 0.008856) varz = pow(varz, 3);
+      else varz = ((varz - 16) / 116.) / 7.787;
+
+      cx[i][j] = xn * varx;
+      cy[i][j] = yn * vary;
+      cz[i][j] = zn * varz;
+    }
+  }
+}
+
+float compute_rgb_value(float c) {
+  if (c <= 0.0031308) return 12.92 * c;
+  return 1.055 * pow(c, 1/2.4) - 0.055;
+}
+
+void convert_ciexyz_to_rgb(float **r, float **g, float **b, float **cx, float **cy, float **cz, int length, int width) {
+  float r_linear, g_linear, b_linear;
+
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      r_linear = 3.2406 * cx[i][j] - 1.5372 * cy[i][j] - 0.4986 * cz[i][j];
+      g_linear = -0.9689 * cx[i][j] + 1.8758 * cy[i][j] + 0.0415 * cz[i][j];
+      b_linear = 0.0557 * cx[i][j] - 0.2040 * cy[i][j] + 1.0570 * cz[i][j];
+
+      r[i][j] = round(compute_rgb_value(r_linear / 100.) * 255);
+      g[i][j] = round(compute_rgb_value(g_linear / 100.) * 255);
+      b[i][j] = round(compute_rgb_value(b_linear / 100.) * 255);
+    }
+  }
+}
+
+void convert_cielab_to_rgb(float **r, float **g, float **b, float **cl, float **ca, float **cb, int length, int width) {
+  float **tmp1 = allocate_float_matrix(length, width);
+  float **tmp2 = allocate_float_matrix(length, width);
+  float **tmp3 = allocate_float_matrix(length, width);
+
+  convert_cielab_to_ciexyz(tmp1, tmp2, tmp3, cl, ca, cb, length, width);
+  convert_ciexyz_to_rgb(r, g, b, tmp1, tmp2, tmp3, length, width);
 
   free_float_matrix(tmp1);
   free_float_matrix(tmp2);
