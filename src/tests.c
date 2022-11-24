@@ -39,7 +39,6 @@ int test_rgb_to_cielab_conversion() {
 
   convert_rgb_to_cielab(cl, ca, cb, r, g, b, 2, 2);
 
-
   if (cl[0][0] - 48.0 > EPS ||
       ca[0][0] - 36.8 > EPS ||
       cb[0][0] + 47.0 > EPS) {
