@@ -7,7 +7,7 @@ float **allocate_float_matrix(int length, int width) {
   matrix = (float **) malloc(sizeof(float *) * length);
   if (matrix == NULL) printf("[allocate_float_matrix]:: Memory error.");
 
-  internal_ptr = (float*) malloc(sizeof(float) * length * width);
+  internal_ptr = (float *) malloc(sizeof(float) * length * width);
   if (internal_ptr == NULL) printf("[allocate_float_matrix]:: Memory error.");
 
   for (int i = 0; i < length; i++, internal_ptr += width) {
@@ -18,6 +18,28 @@ float **allocate_float_matrix(int length, int width) {
 }
 
 void free_float_matrix(float **m) {
+  free(m[0]);
+  free(m);
+}
+
+ClusterData **allocate_clusterdata_matrix(int length, int width) {
+  struct ClusterData **matrix;
+  struct ClusterData *internal_ptr;
+
+  matrix = (struct ClusterData **) malloc(sizeof(struct ClusterData *) * length);
+  if (matrix == NULL) printf("[allocate_clusterdata_matrix]:: Memory error.");
+
+  internal_ptr = (struct ClusterData *) malloc(sizeof(struct ClusterData) * length * width);
+  if (internal_ptr == NULL) printf("[allocate_clusterdata_matrix]:: Memory error.");
+
+  for (int i = 0; i < length; i++, internal_ptr += width) {
+    matrix[i] = internal_ptr;
+  }
+
+  return matrix;
+}
+
+void free_clusterdata_matrix(ClusterData **m) {
   free(m[0]);
   free(m);
 }
@@ -74,7 +96,7 @@ void get_size_image(const char *filename, int *length, int *width) {
   *width = wid;
 }
 
-void read_ppm_image(float **r, float **g, float **b, const char *filename, int *length, int *width) {
+void read_ppm_image(float **r, float **g, float **b, const char *filename) {
   FILE *fp;
   int len, wid, rgb_comp_color;
   char c;
