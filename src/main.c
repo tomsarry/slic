@@ -17,7 +17,6 @@ float computeGradient(LAB lab, int i, int j, int length, int width) {
                  + SQUARE(lab.a[i][j+1]-lab.a[i][j-1])
                  + SQUARE(lab.b[i][j+1]-lab.a[i][j-1]));
 
-  printf("gradient: %f\n", xGradient + yGradient);
   return xGradient + yGradient;
 }
 
@@ -68,81 +67,148 @@ void updateCenter(ClusterData *newCenter, ClusterData *previousCenter) {
   newCenter->distanceToLocalCenter = 0;
 }
 
-void adjustClusterCenters(ClusterData **d, LAB lab, int length, int width) {
+void adjustClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, int length, int width) {
   // gradient values for adjacent pixels
   float current, top, topRight, right, bottomRight, bottom, bottomLeft, left, topLeft;
+  int x, y;
+  Center *node = centers->head;
 
-  for (int i = 0; i < length; i += 2) {
-    for (int j = 0; j < width; j += 2) {
-      if (!d[i][j].isCenter) continue;
+  while (node != NULL) {
+    x = node->x;
+    y = node->y;
 
-      // look at 3x3 neighbours
-      current = computeGradient(lab, i, j, length, width);
-      top = computeGradient(lab, i-1, j, length, width);
-      if (current > top) {
-        erasePreviousCenters(d, i, j, length, width);
-        updateCenter(&d[i-1][j], &d[i][j]);
-      }
-
-      topRight = computeGradient(lab, i-1, j+1, length, width);
-      if (current > topRight) {
-        erasePreviousCenters(d, i, j, length, width);
-        updateCenter(&d[i-1][j+1], &d[i][j]);
-        current = topRight;
-      }
-
-      right = computeGradient(lab, i, j+1, length, width);
-      if (current > right) {
-        erasePreviousCenters(d, i, j, length, width);
-        updateCenter(&d[i][j+1], &d[i][j]);
-        current = right;
-      }
-
-      bottomRight = computeGradient(lab, i+1, j+1, length, width);
-      if (current > bottomRight) {
-        printf("bottomright\n");
-        erasePreviousCenters(d, i, j, length, width);
-        updateCenter(&d[i+1][j+1], &d[i][j]);
-        current = bottomRight;
-      }
-
-      bottom = computeGradient(lab, i+1, j, length, width);
-      if (current > bottom) {
-        printf("bottom\n");
-        erasePreviousCenters(d, i, j, length, width);
-        updateCenter(&d[i+1][j], &d[i][j]);
-        current = bottom;
-      }
-
-      bottomLeft = computeGradient(lab, i+1, j-1, length, width);
-      if (current > bottomLeft) {
-        printf("bottomleft\n");
-        erasePreviousCenters(d, i, j, length, width);
-        updateCenter(&d[i+1][j-1], &d[i][j]);
-        current = bottomLeft;
-      }
-
-      left = computeGradient(lab, i, j-1, length, width);
-      if (current > left) {
-        printf("left\n");
-        erasePreviousCenters(d, i, j, length, width);
-        updateCenter(&d[i][j-1], &d[i][j]);
-        current = left;
-      }
-
-      topLeft = computeGradient(lab, i-1, j-1, length, width);
-      if (current > topLeft) {
-        printf("topleft\n");
-        erasePreviousCenters(d, i, j, length, width);
-        updateCenter(&d[i-1][j-1], &d[i][j]);
-      }
+    current = computeGradient(lab, x, y, length, width);
+    top = computeGradient(lab, x-1, y, length, width);
+    if (current > top) {
+      node->x = x-1;
+      current = top;
     }
+
+    topRight = computeGradient(lab, x-1, y+1, length, width);
+    if (current > topRight) {
+      node->x = x-1;
+      node->y = y+1;
+      current = topRight;
+    }
+
+    right = computeGradient(lab, x, y+1, length, width);
+    if (current > right) {
+      node->y = y+1;
+      current = right;
+    }
+
+    bottomRight = computeGradient(lab, x+1, y+1, length, width);
+    if (current > bottomRight) {
+      node->x = x+1;
+      node->y = y+1;
+      current = bottomRight;
+    }
+
+    bottom = computeGradient(lab, x+1, y, length, width);
+    if (current > bottom) {
+      node->x = x+1;
+      current = bottom;
+    }
+
+    bottomLeft = computeGradient(lab, x+1, y-1, length, width);
+    if (current > bottomLeft) {
+      // todo: x++, y--
+      node->x = x+1;
+      node->y = y-1;
+      current = bottomLeft;
+    }
+
+    left = computeGradient(lab, x, y-1, length, width);
+    if (current > left) {
+      node->y = y-1;
+      current = left;
+    }
+
+    topLeft = computeGradient(lab, x-1, y-1, length, width);
+    if (current > topLeft) {
+      node->x = x-1;
+      node->y = y-1;
+    }
+
+    node = node->next;
   }
 }
 
-void initializeClusterCenters(ClusterData **d, struct LAB lab, int nSuperpixels, int length, int width) {
+// void adjustClusterCenters(ClusterData **d, LAB lab, int length, int width) {
+//   // gradient values for adjacent pixels
+//   float current, top, topRight, right, bottomRight, bottom, bottomLeft, left, topLeft;
+
+//   for (int i = 0; i < length; i += 2) {
+//     for (int j = 0; j < width; j += 2) {
+//       if (!d[i][j].isCenter) continue;
+
+//       // look at 3x3 neighbours
+//       current = computeGradient(lab, i, j, length, width);
+//       top = computeGradient(lab, i-1, j, length, width);
+//       if (current > top) {
+//         erasePreviousCenters(d, i, j, length, width);
+//         updateCenter(&d[i-1][j], &d[i][j]);
+//       }
+
+//       topRight = computeGradient(lab, i-1, j+1, length, width);
+//       if (current > topRight) {
+//         erasePreviousCenters(d, i, j, length, width);
+//         updateCenter(&d[i-1][j+1], &d[i][j]);
+//         current = topRight;
+//       }
+
+//       right = computeGradient(lab, i, j+1, length, width);
+//       if (current > right) {
+//         erasePreviousCenters(d, i, j, length, width);
+//         updateCenter(&d[i][j+1], &d[i][j]);
+//         current = right;
+//       }
+
+//       bottomRight = computeGradient(lab, i+1, j+1, length, width);
+//       if (current > bottomRight) {
+//         printf("bottomright\n");
+//         erasePreviousCenters(d, i, j, length, width);
+//         updateCenter(&d[i+1][j+1], &d[i][j]);
+//         current = bottomRight;
+//       }
+
+//       bottom = computeGradient(lab, i+1, j, length, width);
+//       if (current > bottom) {
+//         printf("bottom\n");
+//         erasePreviousCenters(d, i, j, length, width);
+//         updateCenter(&d[i+1][j], &d[i][j]);
+//         current = bottom;
+//       }
+
+//       bottomLeft = computeGradient(lab, i+1, j-1, length, width);
+//       if (current > bottomLeft) {
+//         printf("bottomleft\n");
+//         erasePreviousCenters(d, i, j, length, width);
+//         updateCenter(&d[i+1][j-1], &d[i][j]);
+//         current = bottomLeft;
+//       }
+
+//       left = computeGradient(lab, i, j-1, length, width);
+//       if (current > left) {
+//         printf("left\n");
+//         erasePreviousCenters(d, i, j, length, width);
+//         updateCenter(&d[i][j-1], &d[i][j]);
+//         current = left;
+//       }
+
+//       topLeft = computeGradient(lab, i-1, j-1, length, width);
+//       if (current > topLeft) {
+//         printf("topleft\n");
+//         erasePreviousCenters(d, i, j, length, width);
+//         updateCenter(&d[i-1][j-1], &d[i][j]);
+//       }
+//     }
+//   }
+// }
+
+void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, int nSuperpixels, int length, int width) {
   int gap = (int) sqrt(length * width / (float) nSuperpixels);
-  int regionCounter = 1;
+  int regionCounter = 0;
 
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
@@ -153,13 +219,30 @@ void initializeClusterCenters(ClusterData **d, struct LAB lab, int nSuperpixels,
       d[i][j].distanceToLocalCenter = length * width;
 
       if (i % gap == 2 && j % gap == 2) {
+        Center *center = (Center *)malloc(sizeof(Center));
+        if (center == NULL) printf("Memory error\n");
+
         d[i][j].isCenter = 1;
         d[i][j].regionLabel = regionCounter++;
+
+        center->x = i;
+        center->y = j;
+        center->region = regionCounter;
+        center->next = NULL;
+
+        if (centers->head == NULL) {
+          centers->head = center;
+          centers->tail = center;
+        } else {
+          centers->tail->next = center;
+          centers->tail = centers->tail->next;
+        }
       }
     }
   }
 
-  adjustClusterCenters(d, lab, length, width);
+  print_linkedlist_centers(centers);
+  adjustClusterCenters(d, lab, centers, length, width);
 }
 
 float computeDistance(int x1, int y1, int x2, int y2) {
@@ -210,6 +293,7 @@ int main() {
   LAB lab;
   ClusterData **data;
   int nSuperpixels;
+  LinkedListCenters *centers = allocate_linkedlist_centers();
 
   if (run_all_tests()) return 1;
 
@@ -231,16 +315,12 @@ int main() {
   nSuperpixels = 8;
 
   data = allocate_clusterdata_matrix(length, width);
-  initializeClusterCenters(data, lab, nSuperpixels, length, width);
+  initializeClusterCenters(data, lab, centers, nSuperpixels, length, width);
   associatePixelsToNearestClusterCenter(data, nSuperpixels, length, width);
 
-  for (int i = 0; i < length; i++) {
-    for (int j = 0; j < width; j++) {
-      printf("(cen?%d:lab%d:d%.1f)", data[i][j].isCenter, data[i][j].regionLabel, data[i][j].distanceToLocalCenter);
-    }
-    printf("\n");
-  }
+  print_linkedlist_centers(centers);
 
+  free_linkedlist_centers(centers);
 
   free_float_matrix(rgb.r);
   free_float_matrix(rgb.g);

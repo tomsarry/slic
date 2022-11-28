@@ -27,6 +27,18 @@ typedef struct LAB {
   float **b;
 } LAB;
 
+typedef struct Center {
+  float x;
+  float y;
+  int region;
+  struct Center *next;
+} Center;
+
+typedef struct LinkedListCenters {
+  struct Center *head;
+  struct Center *tail;
+} LinkedListCenters;
+
 #define FLT_MAX 3.402823466e+38F
 #define SQUARE(X) pow(X, 2)
 
@@ -36,6 +48,10 @@ void free_float_matrix(float **m);
 
 ClusterData **allocate_clusterdata_matrix(int length, int width);
 void free_clusterdata_matrix(ClusterData **m);
+
+LinkedListCenters *allocate_linkedlist_centers();
+void free_linkedlist_centers(LinkedListCenters *centers);
+void print_linkedlist_centers(LinkedListCenters *centers);
 
 // TODO: replace 3 matrices with RGB / LAB structs
 void convert_rgb_to_cielab(float **cl, float **ca, float **cb, float **r, float **g, float **b, int length, int width);

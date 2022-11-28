@@ -44,6 +44,34 @@ void free_clusterdata_matrix(ClusterData **m) {
   free(m);
 }
 
+LinkedListCenters *allocate_linkedlist_centers() {
+  LinkedListCenters *centers = (LinkedListCenters *)malloc(sizeof(LinkedListCenters));
+
+  if (centers == NULL) printf("[allocate_linkedlist_centers]:: Memory error.");
+
+  return centers;
+}
+
+void free_linkedlist_centers(LinkedListCenters *centers) {
+  Center *ptr = centers->head;
+  Center *tmp;
+  while (ptr != NULL) {
+    tmp = ptr->next;
+    free(ptr);
+    ptr = tmp;
+  }
+
+  free(centers);
+}
+void print_linkedlist_centers(LinkedListCenters *centers) {
+  Center *ptr = centers->head;
+  while (ptr != NULL) {
+    printf("(<%.1f;%.1f> (%d))->", ptr->x, ptr->y, ptr->region);
+    ptr = ptr->next;
+  }
+  printf("NULL\n");
+}
+
 float compute_linear_value(float c) {
   if (c <= 0.04045) {
     return c / 12.92;
