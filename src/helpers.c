@@ -44,6 +44,23 @@ void free_clusterdata_matrix(ClusterData **m) {
   free(m);
 }
 
+void print_clusterdata_matrix(ClusterData **m, int length, int width) {
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      printf("(lab%d:d%.1f)", m[i][j].regionLabel, m[i][j].distanceToLocalCenter);
+    }
+    printf("\n");
+  }
+}
+
+Center *allocate_center() {
+  Center *center = (Center *)malloc(sizeof(Center));
+
+  if (center == NULL) printf("Memory error\n");
+
+  return center;
+}
+
 LinkedListCenters *allocate_linkedlist_centers() {
   LinkedListCenters *centers = (LinkedListCenters *)malloc(sizeof(LinkedListCenters));
 

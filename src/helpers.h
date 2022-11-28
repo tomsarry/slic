@@ -6,7 +6,6 @@
 #include <limits.h>
 
 typedef struct ClusterData {
-  int isCenter;
   int regionLabel;
   float distanceToLocalCenter;
   float smallestDistance;
@@ -48,6 +47,9 @@ void free_float_matrix(float **m);
 
 ClusterData **allocate_clusterdata_matrix(int length, int width);
 void free_clusterdata_matrix(ClusterData **m);
+void print_clusterdata_matrix(ClusterData **m, int length, int width);
+
+Center *allocate_center();
 
 LinkedListCenters *allocate_linkedlist_centers();
 void free_linkedlist_centers(LinkedListCenters *centers);

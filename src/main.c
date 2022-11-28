@@ -24,49 +24,6 @@ int isWithinImageBouds(int i, int j, int length, int width) {
   return i >= 0 && j >= 0 && i < length && j < width;
 }
 
-void erasePreviousCenters(ClusterData **d, int i, int j, int length, int width) {
-  d[i][j].isCenter = 0;
-
-  if (isWithinImageBouds(i-1, j, length, width)) {
-    d[i-1][j].isCenter = 0;
-    //todo region label && distance
-  }
-
-  if (isWithinImageBouds(i-1, j+1, length, width)) {
-    d[i-1][j+1].isCenter = 0;
-  }
-
-  if (isWithinImageBouds(i, j+1, length, width)) {
-    d[i][j+1].isCenter = 0;
-  }
-
-  if (isWithinImageBouds(i+1, j+1, length, width)) {
-    d[i+1][j+1].isCenter = 0;
-  }
-
-  if (isWithinImageBouds(i+1, j, length, width)) {
-    d[i+1][j].isCenter = 0;
-  }
-
-  if (isWithinImageBouds(i+1, j-1, length, width)) {
-    d[i+1][j-1].isCenter = 0;
-  }
-
-  if (isWithinImageBouds(i, j-1, length, width)) {
-    d[i][j-1].isCenter = 0;
-  }
-
-  if (isWithinImageBouds(i-1, j-1, length, width)) {
-    d[i-1][j-1].isCenter = 0;
-  }
-}
-
-void updateCenter(ClusterData *newCenter, ClusterData *previousCenter) {
-  newCenter->isCenter = 1;
-  newCenter->regionLabel = previousCenter->regionLabel;
-  newCenter->distanceToLocalCenter = 0;
-}
-
 void adjustClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, int length, int width) {
   // gradient values for adjacent pixels
   float current, top, topRight, right, bottomRight, bottom, bottomLeft, left, topLeft;
@@ -112,7 +69,6 @@ void adjustClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, 
 
     bottomLeft = computeGradient(lab, x+1, y-1, length, width);
     if (current > bottomLeft) {
-      // todo: x++, y--
       node->x = x+1;
       node->y = y-1;
       current = bottomLeft;
@@ -134,77 +90,12 @@ void adjustClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, 
   }
 }
 
-// void adjustClusterCenters(ClusterData **d, LAB lab, int length, int width) {
-//   // gradient values for adjacent pixels
-//   float current, top, topRight, right, bottomRight, bottom, bottomLeft, left, topLeft;
-
-//   for (int i = 0; i < length; i += 2) {
-//     for (int j = 0; j < width; j += 2) {
-//       if (!d[i][j].isCenter) continue;
-
-//       // look at 3x3 neighbours
-//       current = computeGradient(lab, i, j, length, width);
-//       top = computeGradient(lab, i-1, j, length, width);
-//       if (current > top) {
-//         erasePreviousCenters(d, i, j, length, width);
-//         updateCenter(&d[i-1][j], &d[i][j]);
-//       }
-
-//       topRight = computeGradient(lab, i-1, j+1, length, width);
-//       if (current > topRight) {
-//         erasePreviousCenters(d, i, j, length, width);
-//         updateCenter(&d[i-1][j+1], &d[i][j]);
-//         current = topRight;
-//       }
-
-//       right = computeGradient(lab, i, j+1, length, width);
-//       if (current > right) {
-//         erasePreviousCenters(d, i, j, length, width);
-//         updateCenter(&d[i][j+1], &d[i][j]);
-//         current = right;
-//       }
-
-//       bottomRight = computeGradient(lab, i+1, j+1, length, width);
-//       if (current > bottomRight) {
-//         printf("bottomright\n");
-//         erasePreviousCenters(d, i, j, length, width);
-//         updateCenter(&d[i+1][j+1], &d[i][j]);
-//         current = bottomRight;
-//       }
-
-//       bottom = computeGradient(lab, i+1, j, length, width);
-//       if (current > bottom) {
-//         printf("bottom\n");
-//         erasePreviousCenters(d, i, j, length, width);
-//         updateCenter(&d[i+1][j], &d[i][j]);
-//         current = bottom;
-//       }
-
-//       bottomLeft = computeGradient(lab, i+1, j-1, length, width);
-//       if (current > bottomLeft) {
-//         printf("bottomleft\n");
-//         erasePreviousCenters(d, i, j, length, width);
-//         updateCenter(&d[i+1][j-1], &d[i][j]);
-//         current = bottomLeft;
-//       }
-
-//       left = computeGradient(lab, i, j-1, length, width);
-//       if (current > left) {
-//         printf("left\n");
-//         erasePreviousCenters(d, i, j, length, width);
-//         updateCenter(&d[i][j-1], &d[i][j]);
-//         current = left;
-//       }
-
-//       topLeft = computeGradient(lab, i-1, j-1, length, width);
-//       if (current > topLeft) {
-//         printf("topleft\n");
-//         erasePreviousCenters(d, i, j, length, width);
-//         updateCenter(&d[i-1][j-1], &d[i][j]);
-//       }
-//     }
-//   }
-// }
+void initializePixelData(ClusterData *d, int x, int y, int distance) {
+  d->x = x;
+  d->y = y;
+  d->regionLabel = 0;
+  d->distanceToLocalCenter = distance;
+}
 
 void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, int nSuperpixels, int length, int width) {
   int gap = (int) sqrt(length * width / (float) nSuperpixels);
@@ -212,17 +103,11 @@ void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *cente
 
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
-      d[i][j].x = i;
-      d[i][j].y = j;
-      d[i][j].isCenter = 0;
-      d[i][j].regionLabel = 0;
-      d[i][j].distanceToLocalCenter = length * width;
+      initializePixelData(&d[i][j], i, j, length * width);
 
       if (i % gap == 2 && j % gap == 2) {
-        Center *center = (Center *)malloc(sizeof(Center));
-        if (center == NULL) printf("Memory error\n");
+        Center *center = allocate_center();
 
-        d[i][j].isCenter = 1;
         d[i][j].regionLabel = regionCounter++;
 
         center->x = i;
@@ -245,45 +130,49 @@ void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *cente
   adjustClusterCenters(d, lab, centers, length, width);
 }
 
-float computeDistance(int x1, int y1, int x2, int y2) {
+float computeDistance(float x1, float y1, float x2, float y2) {
   return sqrt(SQUARE(x1 - x2) + SQUARE(y1 - y2));
 }
 
-int isPixelAlreadyVisitedByCurrentRegion(ClusterData *currentCenter, ClusterData *currentPixel) {
-  return currentCenter->regionLabel == currentPixel->lastRegionVisited;
+int isPixelAlreadyVisitedByCurrentRegion(Center *center, ClusterData *currentPixel) {
+  return center->region == currentPixel->lastRegionVisited;
 }
 
-void propagateCenter(ClusterData **d, ClusterData *currentCenter, int i, int j, int distanceThreshold, int length, int width) {
+void propagateCenter(ClusterData **d, Center *center, int i, int j, int distanceThreshold, int length, int width) {
   if (!isWithinImageBouds(i, j, length, width)) return;
 
-  if (isPixelAlreadyVisitedByCurrentRegion(currentCenter, &d[i][j])) return;
-  d[i][j].lastRegionVisited = currentCenter->regionLabel;
+  if (isPixelAlreadyVisitedByCurrentRegion(center, &d[i][j])) return;
+  d[i][j].lastRegionVisited = center->region;
 
-  float distanceToCenter = computeDistance(currentCenter->x, currentCenter->y, i, j);
+  float distanceToCenter = computeDistance(center->x, center->y, i, j);
   if (distanceToCenter > distanceThreshold) return;
 
-  if (d[i][j].distanceToLocalCenter > distanceToCenter && !d[i][j].isCenter) {
-    d[i][j].regionLabel = currentCenter->regionLabel;
+  if (d[i][j].distanceToLocalCenter > distanceToCenter) {
+    d[i][j].regionLabel = center->region;
     d[i][j].distanceToLocalCenter = distanceToCenter;
   }
 
   // recursively propagate to the 4 nearest pixels
-  propagateCenter(d, currentCenter, i+1, j, distanceThreshold, length, width);
-  propagateCenter(d, currentCenter, i, j+1, distanceThreshold, length, width);
-  propagateCenter(d, currentCenter, i, j-1, distanceThreshold, length, width);
-  propagateCenter(d, currentCenter, i-1, j, distanceThreshold, length, width);
+  propagateCenter(d, center, i+1, j, distanceThreshold, length, width);
+  propagateCenter(d, center, i, j+1, distanceThreshold, length, width);
+  propagateCenter(d, center, i, j-1, distanceThreshold, length, width);
+  propagateCenter(d, center, i-1, j, distanceThreshold, length, width);
 }
 
-void associatePixelsToNearestClusterCenter(ClusterData **d, int nSuperpixels, int length, int width) {
+void associatePixelsToNearestClusterCenter(ClusterData **d, LinkedListCenters *centers, int nSuperpixels, int length, int width) {
   int distanceThreshold = 2 * sqrt(length * width / nSuperpixels);
+  int x, y;
 
-  for (int i = 0; i < length; i++) {
-    for (int j = 0; j < width; j++) {
-      if (!d[i][j].isCenter) continue;
+  Center *center = centers->head;
+  while (center != NULL) {
+    x = (int) center->x;
+    y = (int) center->y;
 
-      d[i][j].distanceToLocalCenter = 0;
-      propagateCenter(d, &d[i][j], i, j, distanceThreshold, length, width);
-    }
+    d[x][y].distanceToLocalCenter = 0;
+    d[x][y].regionLabel = center->region;
+    propagateCenter(d, center, x, y, distanceThreshold, length, width);
+
+    center = center->next;
   }
 }
 
@@ -316,9 +205,11 @@ int main() {
 
   data = allocate_clusterdata_matrix(length, width);
   initializeClusterCenters(data, lab, centers, nSuperpixels, length, width);
-  associatePixelsToNearestClusterCenter(data, nSuperpixels, length, width);
+  associatePixelsToNearestClusterCenter(data, centers, nSuperpixels, length, width);
 
   print_linkedlist_centers(centers);
+
+  print_clusterdata_matrix(data, length, width);
 
   free_linkedlist_centers(centers);
 
