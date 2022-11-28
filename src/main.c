@@ -113,6 +113,9 @@ void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *cente
         center->x = i;
         center->y = j;
         center->region = regionCounter;
+        center->l = lab.l[i][j];
+        center->a = lab.a[i][j];
+        center->b = lab.b[i][j];
         center->next = NULL;
 
         if (centers->head == NULL) {
@@ -160,7 +163,7 @@ void propagateCenter(ClusterData **d, Center *center, int i, int j, int distance
 }
 
 void associatePixelsToNearestClusterCenter(ClusterData **d, LinkedListCenters *centers, int nSuperpixels, int length, int width) {
-  int distanceThreshold = 2 * sqrt(length * width / nSuperpixels);
+  int distanceThreshold = sqrt(length * width / nSuperpixels);
   int x, y;
 
   Center *center = centers->head;
@@ -174,6 +177,60 @@ void associatePixelsToNearestClusterCenter(ClusterData **d, LinkedListCenters *c
 
     center = center->next;
   }
+}
+
+void restorePixelsMetadata(ClusterData **d, int length, int width) {
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      d[i][j].lastRegionVisited = 0;
+      d[i][j].smallestDistance = FLT_MAX;
+    }
+  }
+}
+
+float computeLabDistance(Center *c, float l, float a, float b) {
+  return sqrt(SQUARE(c->l - l) + SQUARE(c->a - a) + SQUARE(c->b - b));
+}
+
+float compute5dDistance(Center *center, LAB lab, int i, int j, float S) {
+  float dlab, dxy;
+  int m = 10;
+
+  dlab = computeLabDistance(center, lab.l[i][j], lab.a[i][j], lab.b[i][j]);
+  dxy = computeDistance(center->x, center->y, i, j);
+  return dlab + (m / S) * dxy;
+}
+
+void propagateRegion(ClusterData **d, LAB lab, Center *center, int i, int j, int distanceThreshold, int length, int width) {
+  if (!isWithinImageBouds(i, j, length, width)) return;
+
+  if (isPixelAlreadyVisitedByCurrentRegion(center, &d[i][j])) return;
+  d[i][j].lastRegionVisited = center->region;
+
+  float distanceToCenter = compute5dDistance(center, lab, i, j, distanceThreshold);
+
+  // if (i == 5 && j == 5) printf("sd: %.1f, dtc: %.1f, %d\n", d[i][j].smallestDistance, distanceToCenter, d[i][j].smallestDistance > distanceToCenter);
+  if (d[i][j].smallestDistance > distanceToCenter) {
+    d[i][j].smallestDistance = distanceToCenter;
+    d[i][j].regionLabel = center->region;
+    // if (i == 5 && j == 5) printf("sd: %.1f, dtc: %.1f, %d\n", d[i][j].smallestDistance, distanceToCenter, d[i][j].smallestDistance > distanceToCenter);
+  }
+
+  // recursively propagate to the 4 nearest pixels
+  propagateRegion(d, lab, center, i+1, j, distanceThreshold, length, width);
+  propagateRegion(d, lab, center, i, j+1, distanceThreshold, length, width);
+  propagateRegion(d, lab, center, i, j-1, distanceThreshold, length, width);
+  propagateRegion(d, lab, center, i-1, j, distanceThreshold, length, width);
+}
+
+void assignPixelsToRegion(ClusterData **d, LAB lab, Center *center, int nSuperpixels, int length, int width) {
+  int distanceThreshold = sqrt(length * width / nSuperpixels);
+  int x, y;
+
+  x = (int) center->x;
+  y = (int) center->y;
+
+  propagateRegion(d, lab, center, x, y, distanceThreshold, length, width);
 }
 
 int main() {
@@ -206,6 +263,33 @@ int main() {
   data = allocate_clusterdata_matrix(length, width);
   initializeClusterCenters(data, lab, centers, nSuperpixels, length, width);
   associatePixelsToNearestClusterCenter(data, centers, nSuperpixels, length, width);
+
+  print_clusterdata_matrix(data, length, width);
+
+  printf("\n\n");
+
+  Center *center = centers->head;
+  // todo: change for residual error against threshold
+  for (int i = 0; i < 1; i++) {
+    restorePixelsMetadata(data, length, width);
+    while (center != NULL) {
+
+      assignPixelsToRegion(data, lab, center, nSuperpixels, length, width);
+
+      center = center->next;
+    }
+
+    // recomputeCenters();
+
+    // computeResidualError()
+
+  }
+
+  // enforce connectivity
+
+  // lab->rgb conversion
+  // display region outlines
+  // save ppm image
 
   print_linkedlist_centers(centers);
 

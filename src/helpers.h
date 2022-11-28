@@ -29,6 +29,9 @@ typedef struct LAB {
 typedef struct Center {
   float x;
   float y;
+  float l;
+  float a;
+  float b;
   int region;
   struct Center *next;
 } Center;

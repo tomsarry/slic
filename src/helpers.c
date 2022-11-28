@@ -47,7 +47,7 @@ void free_clusterdata_matrix(ClusterData **m) {
 void print_clusterdata_matrix(ClusterData **m, int length, int width) {
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
-      printf("(lab%d:d%.1f)", m[i][j].regionLabel, m[i][j].distanceToLocalCenter);
+      printf("([lab%d]:d%.1f)", m[i][j].regionLabel, m[i][j].smallestDistance);
     }
     printf("\n");
   }
