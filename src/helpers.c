@@ -80,6 +80,7 @@ void free_linkedlist_centers(LinkedListCenters *centers) {
 
   free(centers);
 }
+
 void print_linkedlist_centers(LinkedListCenters *centers) {
   Center *ptr = centers->head;
   while (ptr != NULL) {
@@ -87,6 +88,16 @@ void print_linkedlist_centers(LinkedListCenters *centers) {
     ptr = ptr->next;
   }
   printf("NULL\n");
+}
+
+void copyLAB(LAB *copy, LAB *lab, int length, int width) {
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      copy->l[i][j] = lab->l[i][j];
+      copy->a[i][j] = lab->a[i][j];
+      copy->b[i][j] = lab->b[i][j];
+    }
+  }
 }
 
 float compute_linear_value(float c) {

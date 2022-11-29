@@ -1,7 +1,8 @@
 #include "helpers.h"
 #include "tests.h"
 
-#define NAME_IMG_IN "img_32_32.ppm"
+#define NAME_IMG_IN "img.ppm"
+#define NAME_IMG_ITERATION "img-it"
 #define NAME_IMG_OUT "img_out.ppm"
 
 float computeGradient(LAB lab, int i, int j, int length, int width) {
@@ -295,7 +296,7 @@ void drawBorders(ClusterData **d, LAB lab, int length, int width) {
     for (int j = 0; j < width; j++) {
       if (d[i][j].isBorder) {
         // Black borders
-        lab.l[i][j] = 100.0;
+        lab.l[i][j] = 0.0;
         lab.a[i][j] = 0.0;
         lab.b[i][j] = 0.0;
       }
@@ -303,9 +304,54 @@ void drawBorders(ClusterData **d, LAB lab, int length, int width) {
   }
 }
 
+void drawCenters(RGB rgb, LinkedListCenters *centers, int length, int width) {
+  Center *center = centers->head;
+  int x, y;
+
+  while (center != NULL) {
+    x = round(center->x);
+    y = round( center->y);
+
+    rgb.r[x][y] = 255;
+    rgb.g[x][y] = 0;
+    rgb.b[x][y] = 0;
+
+    center = center->next;
+  }
+}
+
 void segmentImage(ClusterData **d, LAB lab, int length, int width) {
+  restorePixelsMetadata(d, length, width);
   assignBordersToPixels(d, length, width);
   drawBorders(d, lab, length, width);
+}
+
+void copyAndSaveSegmentationStep(ClusterData **d, LAB lab, LinkedListCenters *centers, int iteration, int length, int width) {
+  char filename[25];
+  RGB rgb;
+  LAB cpy;
+  rgb.r = allocate_float_matrix(length, width);
+  rgb.g = allocate_float_matrix(length, width);
+  rgb.b = allocate_float_matrix(length, width);
+  cpy.l = allocate_float_matrix(length, width);
+  cpy.a = allocate_float_matrix(length, width);
+  cpy.b = allocate_float_matrix(length, width);
+
+  copyLAB(&cpy, &lab, length, width);
+
+  segmentImage(d, cpy, length, width);
+  convert_cielab_to_rgb(rgb.r, rgb.g, rgb.b, cpy.l, cpy.a, cpy.b, length, width);
+  drawCenters(rgb, centers, length, width);
+
+  sprintf(filename, "%s-%d.ppm", NAME_IMG_ITERATION, iteration);
+  save_ppm_image(filename, rgb, length, width);
+
+  free_float_matrix(rgb.r);
+  free_float_matrix(rgb.g);
+  free_float_matrix(rgb.b);
+  free_float_matrix(cpy.l);
+  free_float_matrix(cpy.a);
+  free_float_matrix(cpy.b);
 }
 
 int main() {
@@ -331,9 +377,9 @@ int main() {
 
   convert_rgb_to_cielab(lab.l, lab.a, lab.b, rgb.r, rgb.g, rgb.b, length, width);
 
-  // printf("Enter number of superpixels: ");
-  // scanf("%d", &nSuperpixels);
-  nSuperpixels = 8;
+  printf("Enter number of superpixels: ");
+  scanf("%d", &nSuperpixels);
+  // nSuperpixels = 8;
 
   data = allocate_clusterdata_matrix(length, width);
   initializeClusterCenters(data, lab, centers, nSuperpixels, length, width);
@@ -343,11 +389,11 @@ int main() {
 
   // printf("\n\n");
 
+  copyAndSaveSegmentationStep(data, lab, centers, 0, length, width);
+
   Center *center = centers->head;
   // todo: change for residual error against threshold
-  for (int i = 0; i < 1; i++) {
-    restorePixelsMetadata(data, length, width);
-
+  for (int i = 1; i < 4; i++) {
     while (center != NULL) {
       assignPixelsToRegion(data, lab, center, nSuperpixels, length, width);
       center = center->next;
@@ -355,14 +401,18 @@ int main() {
 
     recomputeCenters(data, lab, centers, length, width);
     // computeResidualError()
+
+    copyAndSaveSegmentationStep(data, lab, centers, i, length, width);
   }
 
-  // segmentImage(data, lab, length, width);
+  segmentImage(data, lab, length, width);
 
   // enforce connectivity
 
   // lab->rgb conversion
   convert_cielab_to_rgb(rgb.r, rgb.g, rgb.b, lab.l, lab.a, lab.b, length, width);
+
+  drawCenters(rgb, centers, length, width);
   save_ppm_image(NAME_IMG_OUT, rgb, length, width);
   // display region outlines
   // save ppm image
