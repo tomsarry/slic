@@ -11,6 +11,7 @@ typedef struct ClusterData {
   float smallestDistance;
   int lastRegionVisited;
   int isBorder;
+  int belongsToMainRegion; // if pixel in the same group as the center
   int x;
   int y;
 } ClusterData;
@@ -34,6 +35,7 @@ typedef struct Center {
   float a;
   float b;
   int region;
+  int pixelCount; // number of pixels in the region (not counting disjoint parts)
   struct Center *next;
 } Center;
 

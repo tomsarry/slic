@@ -114,6 +114,7 @@ void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *cente
         center->x = i;
         center->y = j;
         center->region = regionCounter;
+        center->pixelCount = 0;
         center->l = lab.l[i][j];
         center->a = lab.a[i][j];
         center->b = lab.b[i][j];
@@ -193,6 +194,7 @@ void erasePixelsMetadata(ClusterData **d, int length, int width) {
       d[i][j].lastRegionVisited = 0;
       d[i][j].smallestDistance = FLT_MAX;
       d[i][j].isBorder = 0;
+      d[i][j].belongsToMainRegion = 0;
     }
   }
 }
@@ -397,6 +399,97 @@ void copyAndSaveSegmentationStep(ClusterData **d, LAB lab, LinkedListCenters *ce
   free_float_matrix(cpy.b);
 }
 
+void findAdjacentPixelsFromRegion(ClusterData **d, Center *center, int i, int j, int length, int width) {
+  if (!isWithinImageBouds(i, j, length, width)) return;
+
+  if (d[i][j].regionLabel != center->region) return;
+
+  if (d[i][j].lastRegionVisited == center->region) return;
+  d[i][j].lastRegionVisited = center->region;
+
+  center->pixelCount++;
+  d[i][j].belongsToMainRegion = 1;
+
+  findAdjacentPixelsFromRegion(d, center, i-1, j, length, width);
+  findAdjacentPixelsFromRegion(d, center, i+1, j, length, width);
+  findAdjacentPixelsFromRegion(d, center, i, j-1, length, width);
+  findAdjacentPixelsFromRegion(d, center, i, j+1, length, width);
+}
+
+void markAdjacentRegionSize(ClusterData **d, LinkedListCenters *centers, int length, int width) {
+  Center *center = centers->head;
+
+  while (center != NULL) {
+    findAdjacentPixelsFromRegion(d, center, (int) center->x, (int) center->y, length, width);
+
+    center = center->next;
+  }
+}
+
+Center *getRegionCenter(ClusterData **d, LinkedListCenters *centers, int i, int j, int length, int width) {
+  if (!isWithinImageBouds(i, j, length, width)) return NULL;
+
+  if (!d[i][j].belongsToMainRegion) return NULL;
+
+  Center *center = centers->head;
+  while (center != NULL) {
+    if (center->region == d[i][j].regionLabel)
+      return center;
+
+    center = center->next;
+  }
+
+  return NULL;
+}
+
+// int biggestNeighbouringRegion(ClusterData **d, LinkedListCenters *centers, int i, int j, int length, int width) {
+
+// }
+
+void absorbDisjointRegions(ClusterData **d, LinkedListCenters *centers, int length, int width) {
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      if (d[i][j].belongsToMainRegion) continue;
+
+      Center *top;
+      Center *left;
+      Center *right;
+      Center *bottom;
+
+      top = getRegionCenter(d, centers, i-1, j, length, width);
+      bottom = getRegionCenter(d, centers, i+1, j, length, width);
+      left = getRegionCenter(d, centers, i, j-1, length, width);
+      right = getRegionCenter(d, centers, i, j+1, length, width);
+
+      int current = 0;
+      if (top != NULL) {
+        d[i][j].regionLabel = top->region;
+        current = top->pixelCount;
+      }
+
+      if (bottom != NULL && bottom->pixelCount > current) {
+        d[i][j].regionLabel = bottom->region;
+        current = bottom->pixelCount;
+      }
+
+      if (left != NULL && left->pixelCount > current) {
+        d[i][j].regionLabel = left->region;
+        current = left->pixelCount;
+      }
+
+      if (right != NULL && right->pixelCount > current) {
+        d[i][j].regionLabel = right->region;
+        current = right->pixelCount;
+      }
+    }
+  }
+}
+
+void enforceConnectivity(ClusterData **d, LinkedListCenters *centers, int length, int width) {
+  markAdjacentRegionSize(d, centers, length, width);
+  absorbDisjointRegions(d, centers, length, width);
+}
+
 int main() {
   int length, width;
   RGB rgb;
@@ -446,9 +539,11 @@ int main() {
     copyAndSaveSegmentationStep(data, lab, centers, i, length, width);
   }
 
-  segmentImage(data, lab, length, width);
 
   // enforce connectivity
+  enforceConnectivity(data, centers, length, width);
+
+  segmentImage(data, lab, length, width);
 
   // lab->rgb conversion
   convert_cielab_to_rgb(rgb.r, rgb.g, rgb.b, lab.l, lab.a, lab.b, length, width);
