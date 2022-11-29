@@ -129,7 +129,7 @@ void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *cente
     }
   }
 
-  print_linkedlist_centers(centers);
+  // print_linkedlist_centers(centers);
   adjustClusterCenters(d, lab, centers, length, width);
 }
 
@@ -184,6 +184,7 @@ void restorePixelsMetadata(ClusterData **d, int length, int width) {
     for (int j = 0; j < width; j++) {
       d[i][j].lastRegionVisited = 0;
       d[i][j].smallestDistance = FLT_MAX;
+      d[i][j].isBorder = 0;
     }
   }
 }
@@ -233,15 +234,79 @@ void assignPixelsToRegion(ClusterData **d, LAB lab, Center *center, int nSuperpi
   propagateRegion(d, lab, center, x, y, distanceThreshold, length, width);
 }
 
-// void recomputeCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, int length, int width) {
-//   Center *center = centers->head;
+void updateCenterFromAverage(ClusterData **d, LAB lab, Center *center, int length, int width) {
+  float nPoints, sumX, sumY, sumL, sumA, sumB;
 
-//   while (center != NULL) {
-//     compute
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      if (d[i][j].regionLabel != center->region) continue;
 
-//     center = center->next;
-//   }
-// }
+      nPoints += 1;
+      sumX += i;
+      sumY += j;
+      sumL += lab.l[i][j];
+      sumA += lab.a[i][j];
+      sumB += lab.b[i][j];
+    }
+  }
+
+  center->x = sumX / nPoints;
+  center->y = sumY / nPoints;
+  center->l = sumL / nPoints;
+  center->a = sumA / nPoints;
+  center->b = sumB / nPoints;
+}
+
+void recomputeCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, int length, int width) {
+  Center *center = centers->head;
+
+  while (center != NULL) {
+    updateCenterFromAverage(d, lab, center, length, width);
+
+    center = center->next;
+  }
+}
+
+int isSameRegion(ClusterData **d, ClusterData *data, int i, int j, int length, int width) {
+  if (!isWithinImageBouds(i, j, length, width)) return 1;
+
+  return data->regionLabel == d[i][j].regionLabel;
+}
+
+int isPartOfBorder(ClusterData **d, int i, int j, int length, int width) {
+  return !(isSameRegion(d, &d[i][j], i-1, j, length, width) &&
+         isSameRegion(d, &d[i][j], i+1, j, length, width) &&
+         isSameRegion(d, &d[i][j], i, j-1, length, width) &&
+         isSameRegion(d, &d[i][j], i, j+1, length, width));
+}
+
+void assignBordersToPixels(ClusterData **d, int length, int width) {
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      if (!isPartOfBorder(d, i, j, length, width)) continue;
+
+      d[i][j].isBorder = 1;
+    }
+  }
+}
+
+void drawBorders(ClusterData **d, LAB lab, int length, int width) {
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      if (d[i][j].isBorder) {
+        // Black borders
+        lab.l[i][j] = 100.0;
+        lab.a[i][j] = 0.0;
+        lab.b[i][j] = 0.0;
+      }
+    }
+  }
+}
+
+void segmentImage(ClusterData **d, LAB lab, int length, int width) {
+  assignBordersToPixels(d, length, width);
+  drawBorders(d, lab, length, width);
+}
 
 int main() {
   int length, width;
@@ -274,36 +339,37 @@ int main() {
   initializeClusterCenters(data, lab, centers, nSuperpixels, length, width);
   associatePixelsToNearestClusterCenter(data, centers, nSuperpixels, length, width);
 
-  print_clusterdata_matrix(data, length, width);
+  // print_clusterdata_matrix(data, length, width);
 
-  printf("\n\n");
+  // printf("\n\n");
 
   Center *center = centers->head;
   // todo: change for residual error against threshold
   for (int i = 0; i < 1; i++) {
     restorePixelsMetadata(data, length, width);
+
     while (center != NULL) {
-
       assignPixelsToRegion(data, lab, center, nSuperpixels, length, width);
-
       center = center->next;
     }
 
-    // recomputeCenters(data, lab, centers, length, width);
-
+    recomputeCenters(data, lab, centers, length, width);
     // computeResidualError()
-
   }
+
+  // segmentImage(data, lab, length, width);
 
   // enforce connectivity
 
   // lab->rgb conversion
+  convert_cielab_to_rgb(rgb.r, rgb.g, rgb.b, lab.l, lab.a, lab.b, length, width);
+  save_ppm_image(NAME_IMG_OUT, rgb, length, width);
   // display region outlines
   // save ppm image
 
-  print_linkedlist_centers(centers);
+  // print_linkedlist_centers(centers);
 
-  print_clusterdata_matrix(data, length, width);
+  // print_clusterdata_matrix(data, length, width);
 
   free_linkedlist_centers(centers);
 

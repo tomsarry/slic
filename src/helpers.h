@@ -10,6 +10,7 @@ typedef struct ClusterData {
   float distanceToLocalCenter;
   float smallestDistance;
   int lastRegionVisited;
+  int isBorder;
   int x;
   int y;
 } ClusterData;
@@ -61,8 +62,10 @@ void print_linkedlist_centers(LinkedListCenters *centers);
 // TODO: replace 3 matrices with RGB / LAB structs
 void convert_rgb_to_cielab(float **cl, float **ca, float **cb, float **r, float **g, float **b, int length, int width);
 void convert_rgb_to_ciexyz(float **cx, float **cy, float **cz, float **r, float **g, float **b, int length, int width);
+void convert_ciexyz_to_rgb(float **r, float **g, float **b, float **cx, float **cy, float **cz, int length, int width);
 void convert_cielab_to_ciexyz(float **cx, float **cy, float **cz, float **cl, float **ca, float **cb, int length, int width);
 void convert_cielab_to_rgb(float **r, float **g, float **b, float **cl, float **ca, float **cb, int length, int width);
 
 void get_size_image(const char *filename, int *length, int *width);
 void read_ppm_image(float **r, float **g, float **b, const char *filename);
+void save_ppm_image(const char *filaname, RGB rgb, int length, int width);

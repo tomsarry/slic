@@ -208,6 +208,24 @@ void read_ppm_image(float **r, float **g, float **b, const char *filename) {
   fclose(fp);
 }
 
+void save_ppm_image(const char *filename, RGB rgb, int length, int width) {
+  FILE *fp = fopen(filename, "wb");
+  (void) fprintf(fp, "P6\n%d %d\n255\n", length, width);
+
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      static unsigned char color[3];
+      color[0] = (int) rgb.r[i][j];
+      color[1] = (int) rgb.g[i][j];
+      color[2] = (int) rgb.b[i][j];
+
+      (void) fwrite(color, 1, 3, fp);
+    }
+  }
+
+  fclose(fp);
+}
+
 void convert_rgb_to_ciexyz(float **cx, float **cy, float **cz, float **r, float **g, float **b, int length, int width) {
   float r_linear, g_linear, b_linear;
 
@@ -273,27 +291,17 @@ void convert_cielab_to_ciexyz(float **cx, float **cy, float **cz, float **cl, fl
   float xn = 95.0489;
   float yn = 100;
   float zn = 108.8840;
+  float tmp;
 
   float varx, vary, varz;
 
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
-      vary = (cl[i][j] + 16) / 116.;
-      varx = (ca[i][j] / 500.) + vary;
-      varz = vary - (cb[i][j] / 200.);
+      tmp = (cl[i][j] + 16) / 116.;
 
-      if (pow(vary, 3) > 0.008856) vary = pow(vary, 3);
-      else vary = ((vary - 16) / 116.) / 7.787;
-
-      if (pow(varx, 3) > 0.008856) varx = pow(varx, 3);
-      else varx = ((varx - 16) / 116.) / 7.787;
-
-      if (pow(varz, 3) > 0.008856) varz = pow(varz, 3);
-      else varz = ((varz - 16) / 116.) / 7.787;
-
-      cx[i][j] = xn * varx;
-      cy[i][j] = yn * vary;
-      cz[i][j] = zn * varz;
+      cx[i][j] = xn * f_lab_inverse(tmp + ca[i][j] / 500.);
+      cy[i][j] = yn * f_lab_inverse(tmp);
+      cz[i][j] = zn * f_lab_inverse(tmp - cb[i][j] / 200.);
     }
   }
 }
