@@ -130,16 +130,21 @@ void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *cente
     }
   }
 
-  // print_linkedlist_centers(centers);
   adjustClusterCenters(d, lab, centers, length, width);
-}
-
-float computeDistance(float x1, float y1, float x2, float y2) {
-  return sqrt(SQUARE(x1 - x2) + SQUARE(y1 - y2));
 }
 
 int isPixelAlreadyVisitedByCurrentRegion(Center *center, ClusterData *currentPixel) {
   return center->region == currentPixel->lastRegionVisited;
+}
+
+// compute L2 norm
+float computeDistance(float x1, float y1, float x2, float y2) {
+  return sqrt(SQUARE(x1 - x2) + SQUARE(y1 - y2));
+}
+
+// compute L1 norm
+float computeManhattanDistance(float x1, float y1, float x2, float y2) {
+  return abs(x1 - x2) + abs(y2 - y1);
 }
 
 void propagateCenter(ClusterData **d, Center *center, int i, int j, int distanceThreshold, int length, int width) {
@@ -149,7 +154,9 @@ void propagateCenter(ClusterData **d, Center *center, int i, int j, int distance
   d[i][j].lastRegionVisited = center->region;
 
   float distanceToCenter = computeDistance(center->x, center->y, i, j);
-  if (distanceToCenter > distanceThreshold) return;
+  float xDistanceToCenter = abs(center->x - i);
+  float yDistanceToCenter = abs(center->y - j);
+  if (xDistanceToCenter > distanceThreshold || yDistanceToCenter > distanceThreshold) return;
 
   if (d[i][j].distanceToLocalCenter > distanceToCenter) {
     d[i][j].regionLabel = center->region;
@@ -210,7 +217,9 @@ void propagateRegion(ClusterData **d, LAB lab, Center *center, int i, int j, int
   d[i][j].lastRegionVisited = center->region;
 
   float distanceToCenter = computeDistance(center->x, center->y, i, j);
-  if (distanceToCenter > distanceThreshold) return;
+  float xDistanceToCenter = abs(center->x - i);
+  float yDistanceToCenter = abs(center->y - j);
+  if (xDistanceToCenter > distanceThreshold || yDistanceToCenter > distanceThreshold) return;
 
   float generalizedDistance = compute5dDistance(center, lab, i, j, distanceThreshold);
 
