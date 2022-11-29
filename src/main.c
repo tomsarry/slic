@@ -106,7 +106,7 @@ void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *cente
     for (int j = 0; j < width; j++) {
       initializePixelData(&d[i][j], i, j, length * width);
 
-      if (i % gap == 2 && j % gap == 2) {
+      if (i % gap == 0 && j % gap == 0) {
         Center *center = allocate_center();
 
         d[i][j].regionLabel = regionCounter++;
@@ -187,7 +187,7 @@ void associatePixelsToNearestClusterCenter(ClusterData **d, LinkedListCenters *c
   }
 }
 
-void restorePixelsMetadata(ClusterData **d, int length, int width) {
+void erasePixelsMetadata(ClusterData **d, int length, int width) {
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
       d[i][j].lastRegionVisited = 0;
@@ -302,10 +302,26 @@ int isPartOfBorder(ClusterData **d, int i, int j, int length, int width) {
          isSameRegion(d, &d[i][j], i, j+1, length, width));
 }
 
+int isPixelBorderOfDifferentRegion(ClusterData **d, ClusterData *data, int i, int j, int length, int width) {
+  if (!isWithinImageBouds(i, j, length, width)) return 0;
+
+  return data->regionLabel != d[i][j].regionLabel && d[i][j].isBorder;
+}
+
+// if the pixel touches the border of another adjacent region
+int isNextToRegionBorder(ClusterData **d, int i, int j, int length, int width) {
+  return isPixelBorderOfDifferentRegion(d, &d[i][j], i-1, j, length, width) ||
+         isPixelBorderOfDifferentRegion(d, &d[i][j], i+1, j, length, width) ||
+         isPixelBorderOfDifferentRegion(d, &d[i][j], i, j-1, length, width) ||
+         isPixelBorderOfDifferentRegion(d, &d[i][j], i, j+1, length, width);
+}
+
 void assignBordersToPixels(ClusterData **d, int length, int width) {
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
-      if (!isPartOfBorder(d, i, j, length, width)) continue;
+      // for thin borders:
+      if (!isPartOfBorder(d, i, j, length, width) || isNextToRegionBorder(d, i, j, length, width)) continue;
+      // if (!isPartOfBorder(d, i, j, length, width)) continue;
 
       d[i][j].isBorder = 1;
     }
@@ -348,7 +364,7 @@ void drawCenters(RGB rgb, LinkedListCenters *centers, int length, int width) {
 }
 
 void segmentImage(ClusterData **d, LAB lab, int length, int width) {
-  restorePixelsMetadata(d, length, width);
+  erasePixelsMetadata(d, length, width);
   assignBordersToPixels(d, length, width);
   drawBorders(d, lab, length, width);
 }
