@@ -216,7 +216,6 @@ void propagateRegion(ClusterData **d, LAB lab, Center *center, int i, int j, int
   if (isPixelAlreadyVisitedByCurrentRegion(center, &d[i][j])) return;
   d[i][j].lastRegionVisited = center->region;
 
-  float distanceToCenter = computeDistance(center->x, center->y, i, j);
   float xDistanceToCenter = abs(center->x - i);
   float yDistanceToCenter = abs(center->y - j);
   if (xDistanceToCenter > distanceThreshold || yDistanceToCenter > distanceThreshold) return;
@@ -247,6 +246,9 @@ void assignPixelsToRegion(ClusterData **d, LAB lab, Center *center, int nSuperpi
 void updateCenterFromAverage(ClusterData **d, LAB lab, Center *center, int length, int width) {
   float nPoints, sumX, sumY, sumL, sumA, sumB;
 
+  nPoints = 0.0;
+  sumX = 0.; sumY = 0.; sumL = 0.; sumA = 0.; sumB = 0.;
+
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
       if (d[i][j].regionLabel != center->region) continue;
@@ -260,11 +262,21 @@ void updateCenterFromAverage(ClusterData **d, LAB lab, Center *center, int lengt
     }
   }
 
+  if (nPoints == 0) {
+    printf("No points in region %d\n", center->region);
+    return;
+  }
+
   center->x = sumX / nPoints;
   center->y = sumY / nPoints;
   center->l = sumL / nPoints;
   center->a = sumA / nPoints;
   center->b = sumB / nPoints;
+
+  if (!isWithinImageBouds(center->x, center->y, length, width)) {
+    printf("Region %d's center outside of picture: <%.1f:%.1f>\n", center->region, center->x, center->y);
+    exit(1);
+  }
 }
 
 void recomputeCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, int length, int width) {
@@ -319,7 +331,13 @@ void drawCenters(RGB rgb, LinkedListCenters *centers, int length, int width) {
 
   while (center != NULL) {
     x = round(center->x);
-    y = round( center->y);
+    y = round(center->y);
+
+    if (!isWithinImageBouds(x, y, length, width)) {
+      printf("Center not in image bound: <%d:%d>\n", x, y);
+      center = center->next;
+      continue;
+    }
 
     rgb.r[x][y] = 255;
     rgb.g[x][y] = 0;
@@ -394,15 +412,13 @@ int main() {
   initializeClusterCenters(data, lab, centers, nSuperpixels, length, width);
   associatePixelsToNearestClusterCenter(data, centers, nSuperpixels, length, width);
 
-  // print_clusterdata_matrix(data, length, width);
-
-  // printf("\n\n");
-
   copyAndSaveSegmentationStep(data, lab, centers, 0, length, width);
 
-  Center *center = centers->head;
   // todo: change for residual error against threshold
+  Center *center;
   for (int i = 1; i < 4; i++) {
+    center = centers->head;
+
     while (center != NULL) {
       assignPixelsToRegion(data, lab, center, nSuperpixels, length, width);
       center = center->next;
