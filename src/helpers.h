@@ -45,7 +45,7 @@ typedef struct LinkedListCenters {
 } LinkedListCenters;
 
 #define FLT_MAX 3.402823466e+38F
-#define SQUARE(X) pow(X, 2)
+#define SQUARE(X) ((X)*(X))
 
 
 float **allocate_float_matrix(int length, int width);

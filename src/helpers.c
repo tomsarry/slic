@@ -142,7 +142,7 @@ void get_size_image(const char *filename, int *length, int *width) {
   ungetc(c, fp);
 
   // read image size information
-  if (fscanf(fp, "%d %d", &len, &wid) != 2) {
+  if (fscanf(fp, "%d %d", &wid, &len) != 2) {
     fprintf(stderr, "Invalid image size (error loading '%s')\n", filename);
     exit(1);
   }
@@ -186,7 +186,7 @@ void read_ppm_image(float **r, float **g, float **b, const char *filename) {
   ungetc(c, fp);
 
   // read image size information
-  if (fscanf(fp, "%d %d", &len, &wid) != 2) {
+  if (fscanf(fp, "%d %d", &wid, &len) != 2) {
     fprintf(stderr, "Invalid image size (error loading '%s')\n", filename);
     exit(1);
   }
@@ -221,7 +221,7 @@ void read_ppm_image(float **r, float **g, float **b, const char *filename) {
 
 void save_ppm_image(const char *filename, RGB rgb, int length, int width) {
   FILE *fp = fopen(filename, "wb");
-  (void) fprintf(fp, "P6\n%d %d\n255\n", length, width);
+  (void) fprintf(fp, "P6\n%d %d\n255\n", width, length);
 
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {

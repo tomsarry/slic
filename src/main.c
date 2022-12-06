@@ -1,7 +1,7 @@
 #include "helpers.h"
 #include "tests.h"
 
-#define NAME_IMG_IN "img.ppm"
+#define NAME_IMG_IN "img-paper.ppm"
 #define NAME_IMG_ITERATION "img-it"
 #define NAME_IMG_OUT "img_out.ppm"
 
@@ -99,34 +99,38 @@ void initializePixelData(ClusterData *d, int x, int y, int distance) {
 }
 
 void initializeClusterCenters(ClusterData **d, LAB lab, LinkedListCenters *centers, int nSuperpixels, int length, int width) {
-  int gap = (int) sqrt(length * width / (float) nSuperpixels);
+  int area = length * width;
+  float pointArea = area / nSuperpixels;
+  int size = sqrt(pointArea);
   int regionCounter = 0;
 
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
       initializePixelData(&d[i][j], i, j, length * width);
+    }
+  }
 
-      if (i % gap == 0 && j % gap == 0) {
-        Center *center = allocate_center();
+  for (int i = size / 2; i < length; i += size) {
+    for (int j = size / 2; j < width; j += size) {
+      Center *center = allocate_center();
 
-        d[i][j].regionLabel = regionCounter++;
+      d[i][j].regionLabel = regionCounter++;
 
-        center->x = i;
-        center->y = j;
-        center->region = regionCounter;
-        center->pixelCount = 0;
-        center->l = lab.l[i][j];
-        center->a = lab.a[i][j];
-        center->b = lab.b[i][j];
-        center->next = NULL;
+      center->x = i;
+      center->y = j;
+      center->region = regionCounter;
+      center->pixelCount = 0;
+      center->l = lab.l[i][j];
+      center->a = lab.a[i][j];
+      center->b = lab.b[i][j];
+      center->next = NULL;
 
-        if (centers->head == NULL) {
-          centers->head = center;
-          centers->tail = center;
-        } else {
-          centers->tail->next = center;
-          centers->tail = centers->tail->next;
-        }
+      if (centers->head == NULL) {
+        centers->head = center;
+        centers->tail = center;
+      } else {
+        centers->tail->next = center;
+        centers->tail = centers->tail->next;
       }
     }
   }
@@ -346,6 +350,7 @@ void drawBorders(ClusterData **d, LAB lab, int length, int width) {
 void drawCenters(RGB rgb, LinkedListCenters *centers, int length, int width) {
   Center *center = centers->head;
   int x, y;
+  int cnt = 0;
 
   while (center != NULL) {
     x = round(center->x);
@@ -501,6 +506,7 @@ int main() {
   if (run_all_tests()) return 1;
 
   get_size_image(NAME_IMG_IN, &length, &width);
+  printf("Dimensions: L:%d, W:%d\n", length, width);
 
   rgb.r = allocate_float_matrix(length, width);
   rgb.g = allocate_float_matrix(length, width);
@@ -515,7 +521,6 @@ int main() {
 
   printf("Enter number of superpixels: ");
   scanf("%d", &nSuperpixels);
-  // nSuperpixels = 8;
 
   data = allocate_clusterdata_matrix(length, width);
   initializeClusterCenters(data, lab, centers, nSuperpixels, length, width);
