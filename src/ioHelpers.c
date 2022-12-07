@@ -126,5 +126,6 @@ void save_ppm_image(const char *filename, RGB rgb, int length, int width) {
     }
   }
 
+  printf("Successfully saved %s\n", filename);
   fclose(fp);
 }

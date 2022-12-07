@@ -8,9 +8,16 @@
 #define NAME_IMG_OUT "img_out.ppm"
 #define NAME_IMG_INITIAL_REGIONS "img_initial.ppm"
 
+/* At which interval the algorithm should save intermidiate results */
 #define SAVE_NONE 0
 #define SAVE_ALL 1
 #define SAVE_EVERY_FIVE 2
+#define SAVE_MODE SAVE_NONE
+
+/* If the algorithm should draw the centers of each cluster */
+#define ALL_CENTERS 1
+#define NO_CENTERS 0
+#define DRAW_CENTERS NO_CENTERS
 
 /* Converge criteria */
 #define MIN_RESIDUAL_ERROR 2
@@ -157,8 +164,7 @@ int isPixelAlreadyVisitedByCurrentRegion(Center *center, ClusterData *currentPix
   return center->region == currentPixel->lastRegionVisited;
 }
 
-// compute L2 norm
-float computeDistance(float x1, float y1, float x2, float y2) {
+float computeL2Norm(float x1, float y1, float x2, float y2) {
   return sqrt(SQUARE(x1 - x2) + SQUARE(y1 - y2));
 }
 
@@ -168,7 +174,7 @@ void propagateCenter(ClusterData **d, Center *center, int i, int j, int distance
   if (isPixelAlreadyVisitedByCurrentRegion(center, &d[i][j])) return;
   d[i][j].lastRegionVisited = center->region;
 
-  float distanceToCenter = computeDistance(center->x, center->y, i, j);
+  float distanceToCenter = computeL2Norm(center->x, center->y, i, j);
   float xDistanceToCenter = abs(center->x - i);
   float yDistanceToCenter = abs(center->y - j);
   if (xDistanceToCenter > distanceThreshold || yDistanceToCenter > distanceThreshold) return;
@@ -222,7 +228,7 @@ float compute5dDistance(Center *center, LAB lab, int i, int j, float S) {
   int m = M;
 
   dlab = computeLabDistance(center, lab.l[i][j], lab.a[i][j], lab.b[i][j]);
-  dxy = computeDistance(center->x, center->y, i, j);
+  dxy = computeL2Norm(center->x, center->y, i, j);
   return dlab + (m / S) * dxy;
 }
 
@@ -358,6 +364,8 @@ void drawBorders(ClusterData **d, LAB lab, int length, int width) {
 }
 
 void drawCenters(RGB rgb, LinkedListCenters *centers, int length, int width) {
+  if (DRAW_CENTERS == NO_CENTERS) return;
+
   Center *center = centers->head;
   int x, y;
   int cnt = 0;
@@ -499,8 +507,8 @@ void enforceConnectivity(ClusterData **d, LinkedListCenters *centers, int length
   absorbDisjointRegions(d, centers, length, width);
 }
 
-int shouldSaveItermediateStep(int i, int saveMode) {
-  switch(saveMode) {
+int shouldSaveItermediateStep(int i) {
+  switch(SAVE_MODE) {
     case SAVE_NONE:
       return 0;
     case SAVE_ALL:
@@ -561,11 +569,14 @@ int main() {
     recomputeCenters(data, lab, centers, length, width);
     residualError = compute_residual_error(previousCenters, centers);
 
-
-    if (shouldSaveItermediateStep(i, SAVE_NONE)) {
+    if (shouldSaveItermediateStep(i)) {
       char filename[25];
       sprintf(filename, "%s-%d.ppm", NAME_IMG_ITERATION, i);
-      copyAndSaveSegmentationStep(data, lab, centers, filename, length, width);
+
+      ClusterData **copyData = allocate_clusterdata_matrix(length, width);
+      copy_cluster_data(copyData, data, length, width);
+      copyAndSaveSegmentationStep(copyData, lab, centers, filename, length, width);
+      free_clusterdata_matrix(copyData);
     }
 
     printf("[Iteration %d]: residual error=%.3f\n", i++, residualError);

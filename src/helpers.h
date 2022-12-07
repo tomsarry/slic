@@ -54,6 +54,7 @@ void free_float_matrix(float **m);
 ClusterData **allocate_clusterdata_matrix(int length, int width);
 void free_clusterdata_matrix(ClusterData **m);
 void print_clusterdata_matrix(ClusterData **m, int length, int width);
+void copy_cluster_data(ClusterData **copy, ClusterData **d, int length, int width);
 
 Center *allocate_center();
 

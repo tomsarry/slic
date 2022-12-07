@@ -53,6 +53,21 @@ void print_clusterdata_matrix(ClusterData **m, int length, int width) {
   }
 }
 
+void copy_cluster_data(ClusterData **copy, ClusterData **d, int length, int width) {
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      copy[i][j].regionLabel = d[i][j].regionLabel;
+      copy[i][j].distanceToLocalCenter = d[i][j].distanceToLocalCenter;
+      copy[i][j].smallestDistance = d[i][j].smallestDistance;
+      copy[i][j].lastRegionVisited = d[i][j].lastRegionVisited;
+      copy[i][j].isBorder = d[i][j].isBorder;
+      copy[i][j].belongsToMainRegion = d[i][j].belongsToMainRegion;
+      copy[i][j].x = d[i][j].x;
+      copy[i][j].y = d[i][j].y;
+    }
+  }
+}
+
 Center *allocate_center() {
   Center *center = (Center *)malloc(sizeof(Center));
 
