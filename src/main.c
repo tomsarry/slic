@@ -1,4 +1,6 @@
+#include "colorHelpers.h"
 #include "helpers.h"
+#include "ioHelpers.h"
 #include "tests.h"
 
 #define NAME_IMG_IN "img-paper.ppm"
@@ -10,7 +12,13 @@
 #define SAVE_ALL 1
 #define SAVE_EVERY_FIVE 2
 
+/* Converge criteria */
 #define MIN_RESIDUAL_ERROR 2
+/*
+Weight used in LABXY distance, should be in the range [0, 20]
+Increase it for more compact results
+*/
+#define M 10
 
 float computeGradient(LAB lab, int i, int j, int length, int width) {
   float xGradient, yGradient;
@@ -154,11 +162,6 @@ float computeDistance(float x1, float y1, float x2, float y2) {
   return sqrt(SQUARE(x1 - x2) + SQUARE(y1 - y2));
 }
 
-// compute L1 norm
-float computeManhattanDistance(float x1, float y1, float x2, float y2) {
-  return abs(x1 - x2) + abs(y2 - y1);
-}
-
 void propagateCenter(ClusterData **d, Center *center, int i, int j, int distanceThreshold, int length, int width) {
   if (!isWithinImageBouds(i, j, length, width)) return;
 
@@ -216,7 +219,7 @@ float computeLabDistance(Center *c, float l, float a, float b) {
 
 float compute5dDistance(Center *center, LAB lab, int i, int j, float S) {
   float dlab, dxy;
-  int m = 10;
+  int m = M;
 
   dlab = computeLabDistance(center, lab.l[i][j], lab.a[i][j], lab.b[i][j]);
   dxy = computeDistance(center->x, center->y, i, j);
@@ -451,10 +454,6 @@ Center *getRegionCenter(ClusterData **d, LinkedListCenters *centers, int i, int 
 
   return NULL;
 }
-
-// int biggestNeighbouringRegion(ClusterData **d, LinkedListCenters *centers, int i, int j, int length, int width) {
-
-// }
 
 void absorbDisjointRegions(ClusterData **d, LinkedListCenters *centers, int length, int width) {
   for (int i = 0; i < length; i++) {

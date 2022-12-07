@@ -1,17 +1,17 @@
 CC=gcc
 CFLAGS=-lm
 GDBFLAGS=-g
-DEPS=helpers.h tests.h
+OBJFILES=main.o helpers.o colorHelpers.o ioHelpers.o tests.o
+TARGET=main
 
-%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+all: $(TARGET)
 
-build: main.o helpers.o tests.o
-	$(CC) -o main main.o helpers.o tests.o $(CFLAGS)
+$(TARGET): $(OBJFILES)
+	$(CC) -o $(TARGET) $(OBJFILES) $(CFLAGS)
 
-debug: main.o helpers.o tests.o
-	$(CC) -o main main.o helpers.o tests.o $(CFLAGS) $(GDBFLAGS)
-	gdb ./main
+debug: $(OBJFILES)
+	$(CC) -o $(TARGET) $(OBJFILES) $(CFLAGS) $(GDBFLAGS)
+	gdb ./$(TARGET)
 
 clean:
-	rm *.o main
+	rm *.o $(TARGET)
