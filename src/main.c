@@ -4,6 +4,13 @@
 #define NAME_IMG_IN "img-paper.ppm"
 #define NAME_IMG_ITERATION "img-it"
 #define NAME_IMG_OUT "img_out.ppm"
+#define NAME_IMG_INITIAL_REGIONS "img_initial.ppm"
+
+#define SAVE_NONE 0
+#define SAVE_ALL 1
+#define SAVE_EVERY_FIVE 2
+
+#define MIN_RESIDUAL_ERROR 2
 
 float computeGradient(LAB lab, int i, int j, int length, int width) {
   float xGradient, yGradient;
@@ -326,8 +333,8 @@ void assignBordersToPixels(ClusterData **d, int length, int width) {
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
       // for thin borders:
-      if (!isPartOfBorder(d, i, j, length, width) || isNextToRegionBorder(d, i, j, length, width)) continue;
-      // if (!isPartOfBorder(d, i, j, length, width)) continue;
+      // if (!isPartOfBorder(d, i, j, length, width) || isNextToRegionBorder(d, i, j, length, width)) continue;
+      if (!isPartOfBorder(d, i, j, length, width)) continue;
 
       d[i][j].isBorder = 1;
     }
@@ -376,8 +383,7 @@ void segmentImage(ClusterData **d, LAB lab, int length, int width) {
   drawBorders(d, lab, length, width);
 }
 
-void copyAndSaveSegmentationStep(ClusterData **d, LAB lab, LinkedListCenters *centers, int iteration, int length, int width) {
-  char filename[25];
+void copyAndSaveSegmentationStep(ClusterData **d, LAB lab, LinkedListCenters *centers, const char *filename, int length, int width) {
   RGB rgb;
   LAB cpy;
   rgb.r = allocate_float_matrix(length, width);
@@ -393,7 +399,6 @@ void copyAndSaveSegmentationStep(ClusterData **d, LAB lab, LinkedListCenters *ce
   convert_cielab_to_rgb(rgb.r, rgb.g, rgb.b, cpy.l, cpy.a, cpy.b, length, width);
   drawCenters(rgb, centers, length, width);
 
-  sprintf(filename, "%s-%d.ppm", NAME_IMG_ITERATION, iteration);
   save_ppm_image(filename, rgb, length, width);
 
   free_float_matrix(rgb.r);
@@ -495,6 +500,17 @@ void enforceConnectivity(ClusterData **d, LinkedListCenters *centers, int length
   absorbDisjointRegions(d, centers, length, width);
 }
 
+int shouldSaveItermediateStep(int i, int saveMode) {
+  switch(saveMode) {
+    case SAVE_NONE:
+      return 0;
+    case SAVE_ALL:
+      return 1;
+    case SAVE_EVERY_FIVE:
+      return i % 5 == 0;
+  }
+}
+
 int main() {
   int length, width;
   RGB rgb;
@@ -526,11 +542,14 @@ int main() {
   initializeClusterCenters(data, lab, centers, nSuperpixels, length, width);
   associatePixelsToNearestClusterCenter(data, centers, nSuperpixels, length, width);
 
-  copyAndSaveSegmentationStep(data, lab, centers, 0, length, width);
+  copyAndSaveSegmentationStep(data, lab, centers, NAME_IMG_INITIAL_REGIONS, length, width);
 
-  // todo: change for residual error against threshold
+  LinkedListCenters *previousCenters;
+  float residualError = FLT_MAX;
+  int i = 1;
+
   Center *center;
-  for (int i = 1; i < 4; i++) {
+  while (residualError > MIN_RESIDUAL_ERROR) {
     center = centers->head;
 
     while (center != NULL) {
@@ -538,32 +557,28 @@ int main() {
       center = center->next;
     }
 
+    previousCenters = allocate_linkedlist_centers();
+    copy_centers(previousCenters, centers);
     recomputeCenters(data, lab, centers, length, width);
-    // computeResidualError()
+    residualError = compute_residual_error(previousCenters, centers);
 
-    copyAndSaveSegmentationStep(data, lab, centers, i, length, width);
+
+    if (shouldSaveItermediateStep(i, SAVE_NONE)) {
+      char filename[25];
+      sprintf(filename, "%s-%d.ppm", NAME_IMG_ITERATION, i);
+      copyAndSaveSegmentationStep(data, lab, centers, filename, length, width);
+    }
+
+    printf("[Iteration %d]: residual error=%.3f\n", i++, residualError);
+
+    free_linkedlist_centers(previousCenters);
   }
 
-
-  // enforce connectivity
   enforceConnectivity(data, centers, length, width);
 
-  segmentImage(data, lab, length, width);
-
-  // lab->rgb conversion
-  convert_cielab_to_rgb(rgb.r, rgb.g, rgb.b, lab.l, lab.a, lab.b, length, width);
-
-  drawCenters(rgb, centers, length, width);
-  save_ppm_image(NAME_IMG_OUT, rgb, length, width);
-  // display region outlines
-  // save ppm image
-
-  // print_linkedlist_centers(centers);
-
-  // print_clusterdata_matrix(data, length, width);
+  copyAndSaveSegmentationStep(data, lab, centers, NAME_IMG_OUT, length, width);
 
   free_linkedlist_centers(centers);
-
   free_float_matrix(rgb.r);
   free_float_matrix(rgb.g);
   free_float_matrix(rgb.b);

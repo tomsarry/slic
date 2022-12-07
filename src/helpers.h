@@ -60,6 +60,8 @@ Center *allocate_center();
 LinkedListCenters *allocate_linkedlist_centers();
 void free_linkedlist_centers(LinkedListCenters *centers);
 void print_linkedlist_centers(LinkedListCenters *centers);
+void copy_centers(LinkedListCenters *copy, LinkedListCenters *centers);
+float compute_residual_error(LinkedListCenters *previousCenters, LinkedListCenters *current);
 
 void copyLAB(LAB *copy, LAB *lab, int length, int width);
 

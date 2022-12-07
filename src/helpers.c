@@ -90,6 +90,60 @@ void print_linkedlist_centers(LinkedListCenters *centers) {
   printf("NULL\n");
 }
 
+void copy_center(Center *copy, Center *center) {
+  copy->x = center->x;
+  copy->y = center->y;
+  copy->l = center->l;
+  copy->a = center->a;
+  copy->b = center->b;
+  copy->region = center->region;
+  copy->pixelCount = center->pixelCount;
+  copy->next = NULL;
+}
+
+void copy_centers(LinkedListCenters *copy, LinkedListCenters *centers) {
+  Center *center = centers->head;
+  Center *newCenter;
+  Center *previousCenter = NULL;
+
+  while (center != NULL) {
+    newCenter = allocate_center();
+    copy_center(newCenter, center);
+
+    if (previousCenter == NULL) {
+      copy->head = newCenter;
+    } else {
+      previousCenter->next = newCenter;
+    }
+
+    previousCenter = newCenter;
+
+    center = center->next;
+  }
+}
+
+float compute_residual_error(LinkedListCenters *previousCenters, LinkedListCenters *centers) {
+  float sum = 0;
+
+  Center *previousCurrent = previousCenters->head;
+  Center *current = centers->head;
+
+  while (previousCurrent != NULL && current != NULL) {
+    // compute L1 distance between the two centers
+    sum += fabs(previousCurrent->x - current->x);
+    sum += fabs(previousCurrent->y - current->y);
+
+    previousCurrent = previousCurrent->next;
+    current = current->next;
+  }
+
+  if (current != NULL || previousCurrent != NULL) {
+    printf("[compute_residual_error]:: Warning: LinkedLists have different size.\n");
+  }
+
+  return sum;
+}
+
 void copyLAB(LAB *copy, LAB *lab, int length, int width) {
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
