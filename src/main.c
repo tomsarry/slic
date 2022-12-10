@@ -3,7 +3,7 @@
 #include "ioHelpers.h"
 #include "tests.h"
 
-#define NAME_IMG_IN "img-paper.ppm"
+#define NAME_IMG_IN "lady.ppm"
 #define NAME_IMG_ITERATION "img-it"
 #define NAME_IMG_OUT "img_out.ppm"
 #define NAME_IMG_INITIAL_REGIONS "img_initial.ppm"
@@ -19,13 +19,15 @@
 #define NO_CENTERS 0
 #define DRAW_CENTERS NO_CENTERS
 
+#define BORDER_COLOR 255
+
 /* Converge criteria */
-#define MIN_RESIDUAL_ERROR 2
+#define MIN_RESIDUAL_ERROR 1
 /*
 Weight used in LABXY distance, should be in the range [0, 20]
 Increase it for more compact results
 */
-#define M 10
+#define M 13
 
 float computeGradient(LAB lab, int i, int j, int length, int width) {
   float xGradient, yGradient;
@@ -355,9 +357,9 @@ void drawBorders(ClusterData **d, LAB lab, int length, int width) {
     for (int j = 0; j < width; j++) {
       if (d[i][j].isBorder) {
         // Black borders
-        lab.l[i][j] = 0.0;
-        lab.a[i][j] = 0.0;
-        lab.b[i][j] = 0.0;
+        lab.l[i][j] = BORDER_COLOR;
+        lab.a[i][j] = 0;
+        lab.b[i][j] = 0;
       }
     }
   }
@@ -371,6 +373,11 @@ void drawCenters(RGB rgb, LinkedListCenters *centers, int length, int width) {
   int cnt = 0;
 
   while (center != NULL) {
+    if (center->pixelCount == 0) {
+      center = center->next;
+      continue;
+    }
+
     x = round(center->x);
     y = round(center->y);
 
@@ -437,11 +444,21 @@ void findAdjacentPixelsFromRegion(ClusterData **d, Center *center, int i, int j,
   findAdjacentPixelsFromRegion(d, center, i, j+1, length, width);
 }
 
+void resetLastRegionVisited(ClusterData **d, int length, int width) {
+  for (int i = 0; i < length; i++) {
+    for (int j = 0; j < width; j++) {
+      d[i][j].lastRegionVisited = 0;
+    }
+  }
+}
+
 void markAdjacentRegionSize(ClusterData **d, LinkedListCenters *centers, int length, int width) {
+  resetLastRegionVisited(d, length, width);
+
   Center *center = centers->head;
 
   while (center != NULL) {
-    findAdjacentPixelsFromRegion(d, center, (int) center->x, (int) center->y, length, width);
+    findAdjacentPixelsFromRegion(d, center, round(center->x), round(center->y), length, width);
 
     center = center->next;
   }
@@ -463,7 +480,9 @@ Center *getRegionCenter(ClusterData **d, LinkedListCenters *centers, int i, int 
   return NULL;
 }
 
-void absorbDisjointRegions(ClusterData **d, LinkedListCenters *centers, int length, int width) {
+int absorbDisjointRegions(ClusterData **d, LinkedListCenters *centers, int length, int width) {
+  int hasChanged = 0;
+
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < width; j++) {
       if (d[i][j].belongsToMainRegion) continue;
@@ -480,31 +499,40 @@ void absorbDisjointRegions(ClusterData **d, LinkedListCenters *centers, int leng
 
       int current = 0;
       if (top != NULL) {
+        hasChanged = 1;
         d[i][j].regionLabel = top->region;
         current = top->pixelCount;
       }
 
       if (bottom != NULL && bottom->pixelCount > current) {
+        hasChanged = 1;
         d[i][j].regionLabel = bottom->region;
         current = bottom->pixelCount;
       }
 
       if (left != NULL && left->pixelCount > current) {
+        hasChanged = 1;
         d[i][j].regionLabel = left->region;
         current = left->pixelCount;
       }
 
       if (right != NULL && right->pixelCount > current) {
+        hasChanged = 1;
         d[i][j].regionLabel = right->region;
         current = right->pixelCount;
       }
     }
   }
+
+  return hasChanged;
 }
 
 void enforceConnectivity(ClusterData **d, LinkedListCenters *centers, int length, int width) {
-  markAdjacentRegionSize(d, centers, length, width);
-  absorbDisjointRegions(d, centers, length, width);
+  int hasChanged = 1;
+  while (hasChanged) {
+    markAdjacentRegionSize(d, centers, length, width);
+    hasChanged = absorbDisjointRegions(d, centers, length, width);
+  }
 }
 
 int shouldSaveItermediateStep(int i) {
