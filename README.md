@@ -6,11 +6,16 @@ The SLIC algorithm was developped by researchers at EPFL in 2010.
 It constrasted with the other competing State-of-the-Art superpixels segmentation algorithms because it was the fastest at the time and was easy to use, ie. it did not require many parameters to obtain a good segmentation.
 In fact, the _Simple Linear Iterative Clustering_ algorithm runs in `O(N)` time, compared to `O(NlogN)` or even `O(N^2)` for other methods.
 
+## Report
+
+A report (written in French) that gives more precise information about the algorithm is also available [here](./report/report.pdf).
+
 ## Guide
 
 ### Requirements
 * `make`
 * `gcc`
+* The `mogrify` CLI util is not required but it is highly encouraged to have it for easy image format conversion.
 
 ### How to use
 
@@ -32,7 +37,7 @@ Below are some of the results obtained after running the SLIC aglorithm, based o
 |---|---|---|---|
 | ![Initial Image](/src/results/lady/lady.png)  | ![Segmented Image](/src/results/lady/lady_segmented_256.png)  | ![Segmented Image](/src/results/lady/lady_segmented_512.png)   | ![Segmented Image](/src/results/lady/lady_segmented_1024.png)     |
 | ![Initial Image](/src/results/church/church.png)  | ![Segmented Image](/src/results/church/church_segmented_256.png)  | ![Segmented Image](/src/results/church/church_segmented_512.png)   |  ![Segmented Image](/src/results/church/church_segmented_1024.png)  |
-|   |   |   |   |
+| ![Initial Image](/src/results/fish/fish.png)  | ![Segmented Image](/src/results/fish/fish_segmented_256.png)  | ![Segmented Image](/src/results/fish/fish_segmented_512.png)   |  ![Segmented Image](/src/results/fish/fish_segmented_1024.png)  |
 
 
 ## Contribution
