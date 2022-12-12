@@ -41,7 +41,7 @@
 \section{Introduction}
 
 La segmentation d'une image en plusieurs zones homog\`enes est un probl\`eme int\'eressant
-et est utilis\'e dans de nombreux domaines en informatique comme l'imagerie m\'edicale ou encore la vision par ordinateur.
+et est utilis\'ee dans de nombreux domaines en informatique comme l'imagerie m\'edicale ou encore la vision par ordinateur.
 En effet, trouver de nombreuses zones uniformes permet de simplifier l'image, en regroupant les informations redondantes.
 
 La m\'ethode utilis\'ee pour segmenter une image dont nous parlerons sera celle des \textit{Superpixels}:
@@ -64,22 +64,22 @@ En effet, plusieurs couleurs paraissant \textit{aussi} diff\'erentes par le SVH 
 poss\`ederont une distance par norme $L_2$ similaire.
 
 Cet algorithme utilise donc un espace de dimension 5: chaque pixel est assign\'e le 5-tuple suivant: $\langle x, y, l, a, b \rangle$,
-qui correspond \`a sa position $\langle i, j\rangle$ dans l'image, ainsi que ses param\`etres de couleurs.
+qui correspond \`a sa position $\langle x, y\rangle$ dans l'image, ainsi que ses param\`etres de couleurs dans l'espace \lab.
 Cela nous permet donc de calculer une distance pixel \`a pixel qui prend en compte l'\'eloignement physique,
 mais aussi l'importance de la differ\'erence de couleurs entre ceux-ci.
 
 La proc\'edure est tr\`es similaire \`a l'algorithme \textit{K-means} et se d\'eroule de la mani\`ere suivante, un pseudocode simplifi\'e est \'egalement donn\'e dans l'Algorithme \ref{alg:slic}:
 
 \begin{enumerate}
-  \item \textbf{Initialisation des Centres:} Les $k$ centres pour les superpixels sont plac\'es \`a interval regulier pour quadriller l'image initiale.
+  \item \textbf{Initialisation des Centres:} Les $k$ centres pour les superpixels sont plac\'es \`a intervalle reguliers pour quadriller l'image initiale.
   \item \textbf{Ajustement des Centres:} Les centres ont possiblement \'et\'e positionn\'es sur des pixels \`a fort gradient, ie. sur un contour.
         Il est pr\'ef\'erable si c'est le cas de bouger l\'eg\`erement le centre en choissant le pixel \`a plus faible gradient dans son voisinage $3\times 3$.
   \item \textbf{R\'ep\'eter jusqu'\`a convergence ($E \leq 1$):}
         \begin{enumerate}
           \item \textbf{Assignement des R\'egions:} Pour chaque pixel, calculer la distance entre celui-ci et tous les centres pr\'esents dans son voisinage restreint\footnote{Un carr\'e de $2S$ pixels de c\^ot\'es, o\`u si $N$ est le nombre de pixels de l'image, $S=\sqrt{\frac{N}{k}}$}.
-                Cette distance entre deux pixels $s$ et $t$ se fait dans un espace de dimension 5 et se calcule de la mani\`ere suivante:
+                Cette distance entre deux pixels $s$ et $t$ se fait dans un espace de dimension 5 et se calcule de la mani\`ere suivante ($m$ \'etant une valeur entre 1 et 20, 10 est recommand\'e par les chercheurs):
                 \begin{align*}
-                  D_{s,t} = \sqrt{(x_s - x_t)^2 + (y_s - y_t)^2 + (l_s - l_t)^2 + (a_s - a_t)^2 +  (b_s - b_t)^2}
+                  D_{s,t} = \sqrt{(x_s - x_t)^2 + (y_s - y_t)^2}  + \frac{m}{S} \sqrt{(l_s - l_t)^2 + (a_s - a_t)^2 +  (b_s - b_t)^2}
                 \end{align*}
                 Par la suite, on assigne la region de ce pixel comme \'etant la region du centre avec lequel il avait la plus petit distance,
                 ie. le plus de similarit\'es.
@@ -121,9 +121,17 @@ La proc\'edure est tr\`es similaire \`a l'algorithme \textit{K-means} et se d\'e
   \end{algorithmic}
 \end{algorithm}
 
+\section{Discussions}
+
+Les auteurs mettent en avant le fait que l'algorithme \slic\ n'a besoin que du nombre de superpixels comme param\`etre pour fonctionner convenablement.
+Cependant, il est flexible aux besoins de son utilisateur avec l'ajustement de $m$, variable utilis\'ee lors du calcul de la distance dans cet espace 5-dimensions.
+En effet, en augmentant $m$, l'algorithme favorisera des zones plus compactes g\'eographiquement.
+\`A l'inverse, r\'eduire $m$ favorisera des zones de couleurs uniformes.
+
+
 \section{R\'esultats}
 
-Nous pr\'esentons dans cette section les r\'esultats obtenus par l'algorithme sur deux image \texttt{Church} et \texttt{Lady} utilis\'es dans le papier original, cf Figure \ref{fig:church_segm} et \ref{fig:lady_segm}.
+Nous pr\'esentons dans cette section les r\'esultats obtenus par l'algorithme sur trois images \texttt{Church}, \texttt{Lady} et \texttt{Fish} utilis\'ees dans le papier original, cf Figure \ref{fig:church_segm}, \ref{fig:lady_segm} et \ref{fig:fish_segm}.
 
 \begin{figure}
   \begin{subfigure}{0.49\textwidth}
@@ -175,10 +183,39 @@ Nous pr\'esentons dans cette section les r\'esultats obtenus par l'algorithme su
   \label{fig:lady_segm}
 \end{figure}
 
-\section{Discussion}
+\begin{figure}
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=0.8\textwidth]{fish/fish.png}
+    \caption{Image originale}
+  \end{subfigure}
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=.8\textwidth]{fish/fish_segmented_256.png}
+    \caption{$n=256$}
+  \end{subfigure} \\
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=.8\textwidth]{fish/fish_segmented_512.png}
+    \caption{$n=512$}
+  \end{subfigure}
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=.8\textwidth]{fish/fish_segmented_1024.png}
+    \caption{$n=1024$}
+  \end{subfigure}
+  \caption{Image originale et segment\'ee de l'image \texttt{Fish}.}
+  \label{fig:fish_segm}
+\end{figure}
 
 \section{Conclusion}
 
+Nous avons pr\'esent\'e dans ce rapport l'algorithme \slic, permettant de segmenter une image par superpixels,
+zones g\'eographiquement compactes et de couleur perceptuellement uniforme.
+Notre impl\'ementation poss\`ede un temps de calcul lin\'eaire en termes du nombre de pixels de l'image, et le code pour celle-ci est disponible libre de droits \`a l'adresse suivante:
+\url{https://github.com/tomsarry/slic}.
+
+\newpage
 \AtNextBibliography{\small}
 \printbibliography
 

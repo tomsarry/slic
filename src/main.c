@@ -3,7 +3,7 @@
 #include "ioHelpers.h"
 #include "tests.h"
 
-#define NAME_IMG_IN "lady.ppm"
+#define NAME_IMG_IN "fish.ppm"
 #define NAME_IMG_ITERATION "img-it"
 #define NAME_IMG_OUT "img_out.ppm"
 #define NAME_IMG_INITIAL_REGIONS "img_initial.ppm"
@@ -19,7 +19,7 @@
 #define NO_CENTERS 0
 #define DRAW_CENTERS NO_CENTERS
 
-#define BORDER_COLOR 255
+#define BORDER_COLOR 0
 
 /* Converge criteria */
 #define MIN_RESIDUAL_ERROR 1
@@ -27,7 +27,7 @@
 Weight used in LABXY distance, should be in the range [0, 20]
 Increase it for more compact results
 */
-#define M 13
+#define M 10
 
 float computeGradient(LAB lab, int i, int j, int length, int width) {
   float xGradient, yGradient;
